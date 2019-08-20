@@ -1,0 +1,358 @@
+import pygame
+import random
+import time
+import os
+from tkinter import *
+from tkinter import messagebox
+
+time_ = 1/100
+height = 400
+width = 600
+vel=1
+vel_enemy = 2.5
+high_score=0
+high_mot ='_ _ _ _ _ _'
+diff_base = 10
+
+
+class enemy:
+    
+    global  time_,width,height,vel
+    
+    def __init__(self,type):
+        
+        self.type = type 
+        self.dim = 15 * self.type
+    
+    def placer_rdm(self):
+        
+        r_cote = random.randint(0,3)
+        
+        if r_cote == 0:
+            
+            r_t = random.random()
+            self.position= [0,int(r_t*height)]
+            
+        if r_cote ==1:
+            
+            r_t = random.random()
+            self.position= [width,int(r_t*height)]
+        
+        if r_cote ==2:
+            
+            r_t = random.random()
+            self.position= [int(r_t*width),0]
+        
+        if r_cote ==3:
+            
+            r_t = random.random()
+            self.position= [int(r_t*width),height]
+            
+        
+    def set_vitesse(self,target,veloc):
+        
+        
+        self.distance = ((target[0] - self.position[0])**2 + (target[1] - self.position[1])**2)**(1/2)
+        self.vitesse = [(target[0] - self.position[0])/(self.distance * self.type) * veloc ,(target[1] - self.position[1])/(self.type*self.distance) * veloc]
+        
+    def deplacer(self):
+        
+        self.position[0] +=time_ * self.vitesse[0]
+        self.position[1] +=time_ * self.vitesse[1]
+        
+    def check_out(self):
+        
+        if self.position[0] < 0 or self.position[0] > width : 
+        
+            return True 
+            
+        if self.position[1] < 0 or self.position[1] > height :
+            
+            return True
+            
+        return False
+        
+            
+            
+            
+class perso:
+    
+    global  time_,width,height,vel
+    
+    def __init__(self):
+        
+        self.position= [int(width/2) , int(height/2) ]
+        self.dim = 15
+        
+    def deplacer_bas(self,velo):
+        
+        if self.position[1] < height-self.dim:
+           
+            self.position[1]+= velo
+            
+            
+    def deplacer_haut(self,velo):
+        
+        if self.position[1] > 0:
+           
+            self.position[1]-= velo
+            
+            
+    def deplacer_gauche(self,velo):
+        
+        if self.position[0] > 0 :
+           
+            self.position[0]-= velo
+            
+    def deplacer_droite(self,velo):
+        
+        if self.position[0] < width - self.dim:
+           
+            self.position[0]+= velo
+        
+    
+    
+
+def game(difficulte):
+    
+    global height,width, time_,vel_enemy,high_score,high_mot,diff_base
+    
+    
+    pygame.init()
+    screen= pygame.display.set_mode((width,height))
+    font = pygame.font.SysFont("comicsansms", 72)
+    pygame.display.set_caption("Dodgesquare")
+    sous_ult = False
+    jauge_speed = 100
+    jauge_ult = 0
+    T_ult = None 
+    count_ult = 0
+    count_speed = 0
+    count_kill = 0
+    jauge_kill = 0
+
+    cpt = 3
+    
+    while cpt !=0 :
+        screen.fill((255, 255, 255))
+        text = font.render(str(cpt), True, (0, 0, 0))
+        screen.blit(text,(int(width/2) - text.get_width() // 2, int(height/2) - text.get_height() // 2))
+        cpt -= 1
+        pygame.display.flip()
+        time.sleep(1)
+   
+    Nb_enemy_M = 2
+    running = True
+    player_=perso()
+    screen.fill((255, 255, 255))
+    L_enemy=[]
+    
+    for i in range(Nb_enemy_M):
+        
+        r= random.randint(1,2)
+        sujet = enemy(r)
+        sujet.placer_rdm()
+        sujet.set_vitesse(player_.position,vel_enemy*difficulte)
+        L_enemy.append(sujet)
+
+    font_ = pygame.font.SysFont("comicsansms", 15)
+    
+    t0=int(time.time())%1000
+    while running:
+        
+        t1=int(time.time())%1000
+        pygame.event.pump()
+        keys = pygame.key.get_pressed() 
+        
+        if (keys[pygame.K_SPACE]) and jauge_speed >0:
+            
+            vel = 3
+            jauge_speed -= 3
+       
+        if (keys[pygame.K_w]):
+            player_.deplacer_haut(vel)
+       
+        if (keys[pygame.K_s]):
+            player_.deplacer_bas(vel)
+       
+        if (keys[pygame.K_a]):
+            player_.deplacer_gauche(vel)
+        
+        if (keys[pygame.K_d]):
+            player_.deplacer_droite(vel)
+        
+        if (keys[pygame.K_ESCAPE]):
+            text1 = font.render('PAUSE', True, (0, 0, 0))
+            screen.blit(text1,(int(width/2) - text1.get_width() // 2, int(height/2) - text1.get_height() // 2))
+            pygame.display.update()
+            t2=int(time.time()%1000)
+            wait()
+            t3 = int(time.time()%1000)
+            D_t = int((t3-t2)%1000)
+            t0=t0+D_t
+           
+        if (keys[pygame.K_e]) and sous_ult == False and jauge_ult == 100:
+            sous_ult = True
+            jauge_ult = 0
+            T_ult = t1
+       
+        if (keys[pygame.K_q]) and jauge_kill == 100:
+            L_enemy = random.sample(L_enemy,int(len(L_enemy)/2))
+            jauge_kill = 0 
+            
+        
+        for enemy_ in L_enemy:
+            
+            enemy_.deplacer()
+        
+        L_enemy = [enemy_ for enemy_ in L_enemy if enemy_.check_out() == False]
+            
+        while len(L_enemy)!= Nb_enemy_M:
+            
+            nouv_veloc = vel_enemy * difficulte + int(0.5 * vel_enemy * difficulte * int((t1-t0)/10) ) 
+            r= random.randint(1,2)
+            sujet = enemy(r)
+            sujet.placer_rdm()
+            sujet.set_vitesse(player_.position,nouv_veloc)
+            L_enemy.append(sujet)
+            
+        screen.fill((255,255,255))
+        rect_player = pygame.Rect(player_.position[0],player_.position[1],player_.dim,player_.dim)
+        
+        if sous_ult == False :
+            pygame.draw.rect(screen,(125,125,125),(player_.position[0],player_.position[1],player_.dim,player_.dim))
+            
+        if sous_ult == True:
+            pygame.draw.rect(screen,(125,255,125),(player_.position[0],player_.position[1],player_.dim,player_.dim))
+        
+        text_temps = font_.render("Temps : " + str(t1-t0), True, (0, 0, 0))
+        screen.blit(text_temps,(0,0))
+        text_niv = font_.render("Difficulté : "  + str(difficulte) +"%" , True , (0,0,0) )
+        screen.blit(text_niv,(0,text_temps.get_height()))
+        
+        for enemy_ in L_enemy:
+            
+            rect_enemy = pygame.Rect(enemy_.position[0],enemy_.position[1],enemy_.dim,enemy_.dim)
+            pygame.draw.rect(screen,(0,125,125),(enemy_.position[0],enemy_.position[1],enemy_.dim,enemy_.dim))
+            
+            if rect_player.colliderect(rect_enemy) and sous_ult == False:
+                
+                running = False 
+                pygame.display.set_caption("Collision")
+                if t1-t0 > high_score:
+                    high_score = t1-t0
+                    high_mot= str(high_score) + ' à ' + str(difficulte) + '%'
+                diff_base = difficulte
+                break 
+            
+        pygame.draw.rect(screen,(0,0,255),(width - 90 , 10 , int(jauge_speed * 70 * 0.01), 20))
+        pygame.draw.rect(screen, (0,0,0), (width - 90 , 10 , 70, 20), 5) 
+        pygame.draw.rect(screen,(0,255,0),(width - 90 , 40 , int(jauge_kill * 70 * 0.01), 20))
+        pygame.draw.rect(screen, (0,0,0), (width - 90 , 40 , 70, 20), 5)
+        pygame.draw.rect(screen,(255,0,0),(width - 90 , 70 , int(jauge_ult * 70 * 0.01), 20))
+        pygame.draw.rect(screen, (0,0,0), (width - 90 , 70 , 70, 20), 5)
+        
+        if sous_ult == True and 4-(t1-T_ult)%10>0 :
+            text_ult = font_.render(str(4-(t1-T_ult)%10 ), True, (0, 0, 0))
+            screen.blit(text_ult,(width - 55-text_ult.get_width()//2 , 68))
+            
+        if sous_ult ==False :
+            text_ult = font_.render("E", True, (0, 0, 0))
+            screen.blit(text_ult,(width -55-text_ult.get_width()//2 , 68))
+            
+            
+        text_kill = font_.render("A", True, (0, 0, 0))
+        screen.blit(text_kill,(width -55- text_kill.get_width()//2 , 38))
+        
+        text_speed = font_.render("SPACE",True, (0,0,0))
+        screen.blit(text_speed,(width -55-text_speed.get_width() //2 , 8))
+        
+        pygame.display.update()
+        time.sleep(time_)
+        
+        Nb_enemy_M = int((t1-t0)/10) +2
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                break 
+        vel = 1
+       
+        if jauge_speed <= 99 and count_speed == 2:
+            
+            jauge_speed += 1
+            count_speed=0
+        
+        if jauge_ult <= 99 and sous_ult == False and count_ult == 20:
+            
+            jauge_ult += 1
+            count_ult = 0
+            
+        if jauge_kill <= 99 and count_kill == 15:
+            jauge_kill += 1
+            count_kill = 0
+            
+        if T_ult !=None:
+            if t1-T_ult > 3 :
+                sous_ult = False
+                T_ult = None
+        
+        if count_ult <20:
+            count_ult += 1
+        if count_speed<2:
+            count_speed += 1
+        if count_kill<15:
+            count_kill += 1
+            
+        
+    time.sleep(0.5)
+    pygame.quit()
+    
+ 
+def run_game(fenetre,difficulte):
+    
+    global game,run
+    
+    fenetre.destroy()
+    game(difficulte)
+    run()
+    
+def run():
+    
+    global high_mot,diff_base
+    
+    Menu=Tk()
+    Menu.title('Menu')
+    Menu.geometry('300x380')
+    Menu['bg']='white'    
+    Play=Button(Menu,text='Jouer',bg='white', fg = 'black',font=("comicsansms", 40) , borderwidth = 0, command = lambda : run_game(Menu,Diff.get()) ) 
+    High=Label ( Menu , text = "Highscore = " + high_mot , bg = 'white' , fg = 'black', font=("comicsansms", 20) )
+    Facile=Label(Menu, text = "facile", bg = 'white' , fg = 'black', font=("comicsansms", 15))
+    Dur = Label(Menu, text = "dur", bg = 'white' , fg = 'black', font=("comicsansms", 15))
+    Help = Button(Menu, text = "Aide",bg = 'white' , fg = 'black', font=("comicsansms", 20), command = cmd_help)
+    Help.place( x =110, y = 310)
+    Facile.place(x= 10, y = 270)
+    Dur.place(x=240, y = 270)
+    High.place(x=5,y=40)
+    Diff=Scale(Menu,orient='horizontal',bg = 'white', fg = 'white' , from_ = 10, to= 100, resolution = 10, borderwidth = 0, highlightthickness = 0,length = 140, troughcolor = 'snow') 
+    Diff.set(diff_base)
+    Play.place(x=25, y =140, width = 250, height = 100)
+    Diff.place( x = 80 , y  = 260 )
+    
+    Menu.mainloop()
+    
+def wait():
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                return
+            
+def cmd_help():
+    
+    messagebox.showinfo("Aide", "Deplacement : ZQSD \nInvincibilité : E \nClear du board : A \nSpeed : SPACE_BAR ")
+    
+if __name__ == '__main__':
+    run()
